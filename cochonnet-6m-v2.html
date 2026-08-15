@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0f1310">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Cochonnet 6m — V2</title>
+<style>
+:root{
+  --bg:#0b0e0c;
+  --panel:#141915;
+  --panel2:#1b211d;
+  --line:#2a332b;
+  --text:#f3f6f3;
+  --muted:#aeb6af;
+  --accent:#e7c84b;
+  --ok:#5bd56e;
+  --bad:#ff5f5f;
+  --warn:#ff9f43;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{overflow:hidden}
+.app{height:100dvh;display:flex;flex-direction:column;background:#000}
+.camera{position:relative;flex:1;min-height:0;background:#080a09;overflow:hidden}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.overlay{
+  position:absolute;inset:0;
+  background:
+    linear-gradient(to bottom, rgba(0,0,0,.58), rgba(0,0,0,0) 23%, rgba(0,0,0,0) 68%, rgba(0,0,0,.76)),
+    radial-gradient(circle at center, transparent 0 90px, rgba(0,0,0,.12) 190px, rgba(0,0,0,.28) 100%);
+  pointer-events:none;
+}
+.top{
+  position:absolute;inset:auto 0 auto 0;top:0;z-index:4;
+  display:flex;justify-content:space-between;align-items:center;gap:10px;
+  padding:calc(env(safe-area-inset-top) + 12px) 16px 10px;
+}
+.brand{font-size:20px;font-weight:900;letter-spacing:-.04em}
+.brand span{color:var(--accent)}
+.mini{font-size:12px;color:#fff;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.13);padding:7px 10px;border-radius:999px}
+.cross{
+  position:absolute;left:50%;top:46%;width:68px;height:68px;transform:translate(-50%,-50%);z-index:3
+}
+.cross:before,.cross:after{content:"";position:absolute;background:#fff;box-shadow:0 0 6px rgba(0,0,0,.8)}
+.cross:before{left:0;right:0;top:33px;height:2px}
+.cross:after{top:0;bottom:0;left:33px;width:2px}
+.cross i{
+  position:absolute;left:24px;top:24px;width:20px;height:20px;border-radius:50%;
+  border:2px solid var(--accent);box-shadow:0 0 8px rgba(0,0,0,.8)
+}
+.live{
+  position:absolute;left:16px;right:16px;bottom:14px;z-index:4;
+  display:grid;gap:10px;
+}
+.card{
+  background:rgba(0,0,0,.58);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:22px;
+  backdrop-filter:blur(8px);
+  padding:14px;
+}
+.distanceWrap{
+  display:flex;justify-content:space-between;align-items:flex-end;gap:10px
+}
+.distance{
+  font-size:70px;line-height:.9;font-weight:1000;letter-spacing:-.07em;text-shadow:0 2px 14px rgba(0,0,0,.8)
+}
+.distance small{font-size:24px;letter-spacing:-.03em}
+.status{
+  min-width:128px;text-align:center;padding:10px 12px;border-radius:14px;font-size:15px;font-weight:900;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06)
+}
+.status.ok{color:var(--ok)}
+.status.bad{color:var(--bad)}
+.status.warn{color:var(--warn)}
+.gauge{
+  position:relative;height:18px;border-radius:999px;overflow:hidden;background:#101410;border:1px solid #303a31
+}
+.seg{
+  position:absolute;top:0;bottom:0
+}
+.seg.redL{left:0;width:60%;background:linear-gradient(90deg, rgba(255,95,95,.85), rgba(255,95,95,.50))}
+.seg.green{left:60%;width:40%;background:linear-gradient(90deg, rgba(91,213,110,.85), rgba(91,213,110,.55))}
+.seg.greenAll{left:60%;width:40%;background:linear-gradient(90deg, rgba(91,213,110,.85), rgba(91,213,110,.55))}
+.seg.redR{left:100%;width:0}
+.marker{
+  position:absolute;top:-4px;bottom:-4px;width:4px;border-radius:99px;background:#fff;box-shadow:0 0 10px rgba(255,255,255,.9);transform:translateX(-50%)
+}
+.scale{
+  display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px;padding:0 2px
+}
+.controls{
+  background:var(--panel);
+  border-top:1px solid var(--line);
+  padding:12px 14px calc(14px + env(safe-area-inset-bottom));
+  display:grid;gap:10px
+}
+.row{display:flex;gap:10px}
+button{
+  border:0;border-radius:14px;padding:14px 15px;min-height:50px;font-size:16px;font-weight:850;
+  background:#262d27;color:#fff
+}
+button.primary{background:var(--accent);color:#17150f}
+button.secondary{background:#262d27}
+button.slim{min-height:44px;padding:10px 12px;font-size:14px}
+button:disabled{opacity:.45}
+.segmented{
+  background:var(--panel2);border:1px solid #303932;border-radius:14px;padding:4px;display:flex;gap:4px
+}
+.segmented button{flex:1;background:transparent;color:var(--muted);min-height:40px;padding:10px 8px;font-size:14px}
+.segmented button.active{background:#2a332b;color:#fff}
+.settings{
+  display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;color:var(--muted);font-size:13px
+}
+input[type=number]{
+  width:86px;border-radius:12px;border:1px solid #394439;background:#0c100d;color:#fff;padding:10px 8px;text-align:center;font-size:16px
+}
+.small{
+  display:grid;gap:5px;text-align:center;color:var(--muted);font-size:12px;line-height:1.35
+}
+.modal{
+  position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.88);display:flex;align-items:flex-end;
+  padding:18px 14px calc(18px + env(safe-area-inset-bottom))
+}
+.sheet{
+  width:100%;background:#171c18;border:1px solid #303932;border-radius:22px;padding:20px
+}
+.sheet h1{margin:0 0 8px;font-size:28px;letter-spacing:-.04em}
+.sheet p{margin:8px 0;color:#bdc4be;line-height:1.45}
+.sheet ol{margin:10px 0 6px;padding-left:20px;line-height:1.55}
+.sheet button{width:100%;margin-top:10px;background:var(--accent);color:#17150f}
+.hidden{display:none !important}
+.pulse{animation:pulse .25s}
+@keyframes pulse{50%{transform:scale(1.02)}}
+.notice{font-size:11px;color:#8f9990;text-align:center}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="camera" id="camera">
+    <video id="video" autoplay muted playsinline></video>
+    <div class="overlay"></div>
+
+    <div class="top">
+      <div class="brand">COCHONNET <span>6m</span></div>
+      <div class="mini" id="angleInfo">Inclinaison —</div>
+    </div>
+
+    <div class="cross"><i></i></div>
+
+    <div class="live">
+      <div class="card">
+        <div class="distanceWrap">
+          <div class="distance" id="distance">—<small> m</small></div>
+          <div class="status" id="status">PRÊT</div>
+        </div>
+        <div class="gauge" id="gauge">
+          <div class="seg redL"></div>
+          <div class="seg green" id="greenSegment"></div>
+          <div class="marker" id="marker" style="left:0%"></div>
+        </div>
+        <div class="scale">
+          <span>0 m</span><span>6 m</span><span>10 m</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="segmented" id="modeSegment">
+      <button class="active" data-mode="check6">Mode 6 m</button>
+      <button data-mode="range610">Mode 6–10 m</button>
+    </div>
+
+    <div class="row">
+      <button class="secondary" id="calibrateBtn">① Calibrer l’horizon</button>
+      <button class="primary" id="liveBtn" disabled>② Lancer la mesure</button>
+    </div>
+
+    <div class="settings">
+      <label for="height">Hauteur du téléphone par rapport au sol</label>
+      <div><input id="height" type="number" min="0.50" max="2.20" step="0.01"> m</div>
+    </div>
+
+    <div class="row">
+      <button class="slim secondary" id="minusBtn">− 1 cm</button>
+      <button class="slim secondary" id="plusBtn">+ 1 cm</button>
+      <button class="slim secondary" id="resetBtn">Réinitialiser</button>
+    </div>
+
+    <div class="small">
+      <div><b>Utilisation :</b> garde le téléphone à la même hauteur, calibre à l’horizon, puis vise le centre du cochonnet.</div>
+      <div class="notice">Estimation pratique uniquement — pas une mesure officielle homologuée.</div>
+    </div>
+  </section>
+</div>
+
+<div class="modal" id="intro">
+  <div class="sheet">
+    <h1>V2 plus rapide</h1>
+    <p>Cette version mesure <b>en direct</b> après calibration. Tu n’as plus besoin d’appuyer à chaque lancer.</p>
+    <ol>
+      <li>Règle la hauteur du téléphone.</li>
+      <li>Vise horizontalement au loin et touche <b>Calibrer l’horizon</b>.</li>
+      <li>Touche <b>Lancer la mesure</b>.</li>
+      <li>Vise le cochonnet : la distance et le statut s’actualisent en direct.</li>
+    </ol>
+    <button id="startBtn">Activer caméra et capteurs</button>
+  </div>
+</div>
+
+<script>
+const storage = {
+  get(k, fallback){
+    const v = localStorage.getItem(k);
+    return v === null ? fallback : v;
+  },
+  set(k, v){ localStorage.setItem(k, v); }
+};
+
+const video = document.getElementById('video');
+const angleInfo = document.getElementById('angleInfo');
+const distanceEl = document.getElementById('distance');
+const statusEl = document.getElementById('status');
+const marker = document.getElementById('marker');
+const greenSegment = document.getElementById('greenSegment');
+const cameraEl = document.getElementById('camera');
+
+const intro = document.getElementById('intro');
+const startBtn = document.getElementById('startBtn');
+const calibrateBtn = document.getElementById('calibrateBtn');
+const liveBtn = document.getElementById('liveBtn');
+const resetBtn = document.getElementById('resetBtn');
+const minusBtn = document.getElementById('minusBtn');
+const plusBtn = document.getElementById('plusBtn');
+const heightEl = document.getElementById('height');
+
+const modeButtons = [...document.querySelectorAll('#modeSegment button')];
+
+let rawBeta = null;
+let smoothBeta = null;
+let baseline = null;
+let liveMode = false;
+let mode = storage.get('cochonnet_mode', 'check6');
+let lastState = '';
+let rafId = null;
+
+heightEl.value = storage.get('cochonnet_height', '1.35');
+setMode(mode);
+
+function clamp(n, min, max){ return Math.max(min, Math.min(max, n)); }
+
+function setMode(newMode){
+  mode = newMode;
+  storage.set('cochonnet_mode', mode);
+  modeButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+  // Visuel de jauge identique, mais logique différente
+  if(mode === 'check6'){
+    greenSegment.style.left = '60%';
+    greenSegment.style.width = '40%';
+  }else{
+    greenSegment.style.left = '60%';
+    greenSegment.style.width = '40%';
+  }
+  updateReadout(null);
+}
+
+modeButtons.forEach(btn => {
+  btn.addEventListener('click', () => setMode(btn.dataset.mode));
+});
+
+function vibrate(pattern){
+  if(navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function orientationHandler(e){
+  if(typeof e.beta === 'number'){
+    rawBeta = e.beta;
+    smoothBeta = smoothBeta === null ? rawBeta : (smoothBeta * 0.82 + rawBeta * 0.18);
+    angleInfo.textContent = `Inclinaison ${smoothBeta.toFixed(1)}°`;
+  }
+}
+
+async function requestMotion(){
+  if(typeof DeviceOrientationEvent !== 'undefined' &&
+     typeof DeviceOrientationEvent.requestPermission === 'function'){
+    const res = await DeviceOrientationEvent.requestPermission();
+    if(res !== 'granted') throw new Error('Capteurs refusés');
+  }
+  window.addEventListener('deviceorientation', orientationHandler, true);
+}
+
+async function startCamera(){
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video: {
+      facingMode: {ideal:'environment'},
+      width: {ideal:1920},
+      height: {ideal:1080}
+    },
+    audio:false
+  });
+  video.srcObject = stream;
+}
+
+function updateReadout(distance){
+  if(distance === null || !Number.isFinite(distance)){
+    distanceEl.innerHTML = '—<small> m</small>';
+    marker.style.left = '0%';
+    if(!baseline){
+      statusEl.textContent = 'PRÊT';
+      statusEl.className = 'status';
+    }else if(!liveMode){
+      statusEl.textContent = 'CALIBRÉ';
+      statusEl.className = 'status warn';
+    }else{
+      statusEl.textContent = 'VISE LE COCHONNET';
+      statusEl.className = 'status warn';
+    }
+    return;
+  }
+
+  distanceEl.innerHTML = `${distance.toFixed(2)}<small> m</small>`;
+  const gaugeMax = 10;
+  const pct = clamp((distance / gaugeMax) * 100, 0, 100);
+  marker.style.left = `${pct}%`;
+
+  let state = '';
+  if(mode === 'check6'){
+    if(distance < 6){
+      state = 'short';
+      statusEl.textContent = 'TROP COURT';
+      statusEl.className = 'status bad';
+    }else{
+      state = 'ok';
+      statusEl.textContent = 'VALIDE';
+      statusEl.className = 'status ok';
+    }
+  }else{
+    if(distance < 6){
+      state = 'short';
+      statusEl.textContent = 'TROP COURT';
+      statusEl.className = 'status bad';
+    }else if(distance > 10){
+      state = 'long';
+      statusEl.textContent = 'TROP LONG';
+      statusEl.className = 'status bad';
+    }else{
+      state = 'ok';
+      statusEl.textContent = 'VALIDE';
+      statusEl.className = 'status ok';
+    }
+  }
+
+  if(state !== lastState){
+    lastState = state;
+    cameraEl.classList.remove('pulse');
+    void cameraEl.offsetWidth;
+    cameraEl.classList.add('pulse');
+    if(state === 'ok') vibrate([45,30,45]);
+    else vibrate(120);
+  }
+}
+
+function computeDistance(){
+  if(smoothBeta === null || baseline === null || !liveMode) return null;
+  const h = parseFloat(heightEl.value);
+  if(!Number.isFinite(h) || h < 0.5 || h > 2.2) return null;
+
+  // Différence absolue entre l’horizon calibré et la visée vers le bas.
+  const downDeg = Math.abs(smoothBeta - baseline);
+
+  // En dessous de 2° la mesure devient trop instable/énorme.
+  if(downDeg < 2) return null;
+
+  const rad = downDeg * Math.PI / 180;
+  const d = h / Math.tan(rad);
+  if(!Number.isFinite(d) || d < 0 || d > 999) return null;
+  return d;
+}
+
+function loop(){
+  updateReadout(computeDistance());
+  rafId = requestAnimationFrame(loop);
+}
+
+function saveHeight(){
+  const val = parseFloat(heightEl.value);
+  if(Number.isFinite(val)) storage.set('cochonnet_height', val.toFixed(2));
+}
+
+heightEl.addEventListener('change', saveHeight);
+heightEl.addEventListener('input', saveHeight);
+
+minusBtn.addEventListener('click', () => {
+  const v = clamp((parseFloat(heightEl.value) || 1.35) - 0.01, 0.5, 2.2);
+  heightEl.value = v.toFixed(2);
+  saveHeight();
+});
+
+plusBtn.addEventListener('click', () => {
+  const v = clamp((parseFloat(heightEl.value) || 1.35) + 0.01, 0.5, 2.2);
+  heightEl.value = v.toFixed(2);
+  saveHeight();
+});
+
+calibrateBtn.addEventListener('click', () => {
+  if(smoothBeta === null){
+    alert("Le capteur d’inclinaison n’est pas encore disponible.");
+    return;
+  }
+  baseline = smoothBeta;
+  liveBtn.disabled = false;
+  liveMode = false;
+  lastState = '';
+  updateReadout(null);
+  vibrate(35);
+});
+
+liveBtn.addEventListener('click', () => {
+  if(baseline === null){
+    alert("Calibre d’abord l’horizon.");
+    return;
+  }
+  liveMode = !liveMode;
+  liveBtn.textContent = liveMode ? 'Mesure en direct : ON' : '② Lancer la mesure';
+  liveBtn.classList.toggle('secondary', !liveMode);
+  liveBtn.classList.toggle('primary', liveMode);
+  lastState = '';
+  updateReadout(computeDistance());
+  vibrate(35);
+});
+
+resetBtn.addEventListener('click', () => {
+  baseline = null;
+  liveMode = false;
+  lastState = '';
+  liveBtn.disabled = true;
+  liveBtn.textContent = '② Lancer la mesure';
+  liveBtn.classList.remove('secondary');
+  liveBtn.classList.add('primary');
+  updateReadout(null);
+});
+
+startBtn.addEventListener('click', async () => {
+  startBtn.disabled = true;
+  startBtn.textContent = 'Activation…';
+  try{
+    await Promise.all([requestMotion(), startCamera()]);
+    intro.classList.add('hidden');
+    if(!rafId) loop();
+  }catch(err){
+    console.error(err);
+    startBtn.disabled = false;
+    startBtn.textContent = 'Réessayer';
+    alert("Impossible d’activer la caméra ou les capteurs. Ouvre la page dans Safari, vérifie les autorisations, et assure-toi que le site est bien en HTTPS.");
+  }
+});
+</script>
+</body>
+</html>
