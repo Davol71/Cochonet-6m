@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#101411">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Cochonnet 6m</title>
+<style>
+:root{
+  --bg:#0b0e0c; --panel:#141915; --line:#283129; --text:#f5f7f5;
+  --muted:#a8b0aa; --ok:#55d66b; --bad:#ff5b5b; --accent:#e7c84b;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{overflow:hidden}
+.app{height:100dvh;display:flex;flex-direction:column;background:#000}
+.camera{position:relative;flex:1;min-height:0;background:#080a09;overflow:hidden}
+video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.shade{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.42),transparent 25%,transparent 67%,rgba(0,0,0,.63));pointer-events:none}
+.top{
+  position:absolute;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 12px) 16px 10px;
+  display:flex;align-items:center;justify-content:space-between;z-index:4
+}
+.brand{font-weight:800;letter-spacing:-.03em;font-size:19px}
+.badge{font-size:12px;color:#fff;background:rgba(0,0,0,.48);border:1px solid rgba(255,255,255,.15);padding:7px 10px;border-radius:999px}
+.cross{position:absolute;left:50%;top:50%;width:54px;height:54px;transform:translate(-50%,-50%);z-index:3}
+.cross:before,.cross:after{content:"";position:absolute;background:white;box-shadow:0 0 3px #000}
+.cross:before{width:54px;height:2px;left:0;top:26px}
+.cross:after{height:54px;width:2px;left:26px;top:0}
+.cross i{position:absolute;width:12px;height:12px;border:2px solid var(--accent);border-radius:50%;left:21px;top:21px}
+.result{
+  position:absolute;left:16px;right:16px;bottom:18px;z-index:4;
+  display:flex;align-items:flex-end;justify-content:space-between;gap:10px
+}
+.distance{font-size:58px;line-height:.9;font-weight:900;letter-spacing:-.06em;text-shadow:0 2px 12px #000}
+.distance small{font-size:24px;letter-spacing:-.02em}
+.status{font-size:14px;font-weight:900;padding:9px 11px;border-radius:11px;background:rgba(0,0,0,.65);border:1px solid rgba(255,255,255,.12);text-align:right}
+.controls{background:var(--panel);border-top:1px solid var(--line);padding:14px 14px calc(14px + env(safe-area-inset-bottom));display:grid;gap:10px}
+.row{display:flex;gap:10px;align-items:center}
+button{
+  border:0;border-radius:14px;padding:14px 15px;font-size:16px;font-weight:800;
+  background:#262d27;color:white;min-height:50px
+}
+button.primary{flex:1;background:var(--accent);color:#18170f}
+button.secondary{flex:1}
+button:disabled{opacity:.45}
+.settings{
+  display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;
+  color:var(--muted);font-size:13px
+}
+input[type=number]{
+  width:82px;border-radius:10px;border:1px solid #343e36;background:#0d110e;color:#fff;
+  padding:9px 8px;font-size:16px;text-align:center
+}
+.help{font-size:12px;color:var(--muted);line-height:1.35;text-align:center}
+.modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:20;display:flex;align-items:flex-end;
+  padding:18px 14px calc(18px + env(safe-area-inset-bottom))
+}
+.card{width:100%;background:#171c18;border:1px solid #303932;border-radius:22px;padding:20px}
+.card h1{font-size:28px;margin:0 0 8px;letter-spacing:-.04em}
+.card p{color:#bac1bc;line-height:1.45;margin:8px 0}
+.card ol{padding-left:20px;color:#e7eae8;line-height:1.5}
+.card button{width:100%;background:var(--accent);color:#18170f;margin-top:8px}
+.hidden{display:none}
+.flash{animation:flash .35s}
+@keyframes flash{50%{filter:brightness(1.65)}}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="camera" id="camera">
+    <video id="video" autoplay muted playsinline></video>
+    <div class="shade"></div>
+    <div class="top">
+      <div class="brand">COCHONNET <span style="color:var(--accent)">6m</span></div>
+      <div class="badge" id="angleBadge">Inclinaison —</div>
+    </div>
+    <div class="cross"><i></i></div>
+    <div class="result">
+      <div class="distance" id="distance">—<small> m</small></div>
+      <div class="status" id="status">PRÊT À<br>CALIBRER</div>
+    </div>
+  </section>
+
+  <section class="controls">
+    <div class="row">
+      <button class="secondary" id="zeroBtn">① Calibrer l’horizon</button>
+      <button class="primary" id="measureBtn" disabled>② Mesurer</button>
+    </div>
+    <div class="settings">
+      <label for="height">Hauteur de la caméra par rapport au sol</label>
+      <div><input id="height" type="number" min="0.50" max="2.20" step="0.01" value="1.35"> m</div>
+    </div>
+    <div class="help">Pour une bonne mesure : terrain plat, téléphone à hauteur constante, vise le centre du cochonnet avec la croix.</div>
+  </section>
+</div>
+
+<div class="modal" id="intro">
+  <div class="card">
+    <h1>Mesurer les 6 mètres</h1>
+    <p>Cette V1 utilise l’inclinaison de ton iPhone. Avant la première mesure :</p>
+    <ol>
+      <li>Indique la hauteur de la caméra au-dessus du sol.</li>
+      <li>Vise horizontalement au loin et touche <b>Calibrer l’horizon</b>.</li>
+      <li>Sans changer la hauteur du téléphone, vise le centre du cochonnet.</li>
+      <li>Touche <b>Mesurer</b>.</li>
+    </ol>
+    <p style="font-size:12px">Estimation pratique uniquement : pour une mesure officielle, utilise un instrument de mesure homologué.</p>
+    <button id="startBtn">Activer caméra et capteurs</button>
+  </div>
+</div>
+
+<script>
+const video = document.querySelector('#video');
+const angleBadge = document.querySelector('#angleBadge');
+const zeroBtn = document.querySelector('#zeroBtn');
+const measureBtn = document.querySelector('#measureBtn');
+const distanceEl = document.querySelector('#distance');
+const statusEl = document.querySelector('#status');
+const heightEl = document.querySelector('#height');
+const intro = document.querySelector('#intro');
+const startBtn = document.querySelector('#startBtn');
+const camera = document.querySelector('#camera');
+
+let beta = null;
+let baseline = null;
+let lastDistance = null;
+
+function orientationHandler(e){
+  if(typeof e.beta === 'number'){
+    beta = e.beta;
+    angleBadge.textContent = `Inclinaison ${beta.toFixed(1)}°`;
+  }
+}
+
+async function requestMotion(){
+  if(typeof DeviceOrientationEvent !== 'undefined' &&
+     typeof DeviceOrientationEvent.requestPermission === 'function'){
+    const r = await DeviceOrientationEvent.requestPermission();
+    if(r !== 'granted') throw new Error("Capteurs refusés");
+  }
+  window.addEventListener('deviceorientation', orientationHandler, true);
+}
+
+async function startCamera(){
+  const stream = await navigator.mediaDevices.getUserMedia({
+    video:{facingMode:{ideal:'environment'}, width:{ideal:1920}, height:{ideal:1080}},
+    audio:false
+  });
+  video.srcObject = stream;
+}
+
+startBtn.addEventListener('click', async ()=>{
+  startBtn.disabled = true;
+  startBtn.textContent = 'Activation…';
+  try{
+    await Promise.all([requestMotion(), startCamera()]);
+    intro.classList.add('hidden');
+  }catch(err){
+    startBtn.disabled = false;
+    startBtn.textContent = 'Réessayer';
+    alert("Impossible d'activer la caméra ou les capteurs. Vérifie les autorisations Safari et que la page est ouverte en HTTPS.");
+  }
+});
+
+zeroBtn.addEventListener('click', ()=>{
+  if(beta === null){
+    alert("Le capteur d’inclinaison n’est pas encore disponible.");
+    return;
+  }
+  baseline = beta;
+  measureBtn.disabled = false;
+  statusEl.textContent = "HORIZON\nCALIBRÉ";
+  distanceEl.innerHTML = '—<small> m</small>';
+  if(navigator.vibrate) navigator.vibrate(30);
+});
+
+measureBtn.addEventListener('click', ()=>{
+  if(beta === null || baseline === null) return;
+  const h = parseFloat(heightEl.value);
+  if(!Number.isFinite(h) || h < .5 || h > 2.2){
+    alert("Entre une hauteur de caméra réaliste.");
+    return;
+  }
+
+  // On utilise la différence absolue pour tolérer les conventions de signe
+  // différentes suivant l’orientation et l’appareil.
+  const downDeg = Math.abs(beta - baseline);
+  const rad = downDeg * Math.PI / 180;
+
+  if(downDeg < 2){
+    distanceEl.innerHTML = '∞<small> m</small>';
+    statusEl.textContent = "ANGLE\nTROP FAIBLE";
+    return;
+  }
+
+  // Distance horizontale au sol entre la verticale de la caméra et la cible.
+  const d = h / Math.tan(rad);
+  lastDistance = d;
+
+  distanceEl.innerHTML = `${d.toFixed(2)}<small> m</small>`;
+
+  if(d >= 6 && d <= 10){
+    statusEl.innerHTML = "✓ DISTANCE<br>VALIDE";
+    statusEl.style.color = "var(--ok)";
+    if(navigator.vibrate) navigator.vibrate([60,40,60]);
+  }else if(d < 6){
+    statusEl.innerHTML = "✕ TROP<br>COURT";
+    statusEl.style.color = "var(--bad)";
+    if(navigator.vibrate) navigator.vibrate(160);
+  }else{
+    statusEl.innerHTML = "✕ TROP<br>LONG";
+    statusEl.style.color = "var(--bad)";
+    if(navigator.vibrate) navigator.vibrate(160);
+  }
+  camera.classList.remove('flash');
+  void camera.offsetWidth;
+  camera.classList.add('flash');
+});
+</script>
+</body>
+</html>
